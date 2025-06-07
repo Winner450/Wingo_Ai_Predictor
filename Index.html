@@ -1,4 +1,4 @@
-i<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -139,12 +139,12 @@ i<!DOCTYPE html>
         const size = (number >= 5) ? "🔴 Big" : "🟢 Small";
         const confidence = Math.floor(Math.random() * 16) + 85;
 
-        const resultHTML = 
+        const resultHTML = `
           <p><span class="label">📏 Size:</span> ${size}</p>
           <p><span class="label">🎨 Colour:</span> ${color}</p>
           <p><span class="label">🔢 Number:</span> ${number}</p>
           <p><span class="label">🧠 Confidence:</span> ${confidence}%</p>
-        ;
+        `;
 
         thinking.style.display = "none";
         resultBox.innerHTML = resultHTML;
