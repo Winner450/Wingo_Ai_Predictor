@@ -1,121 +1,40 @@
-'use strict';
-// Chart instances
-let freqChartInstance = null;
-let bigSmallChartInstance = null;
-
-document.addEventListener('DOMContentLoaded', function() {
-    const inputField = document.getElementById('numbers');
-    const predictBtn = document.getElementById('predictBtn');
-    const resultDiv = document.getElementById('result');
-    predictBtn.addEventListener('click', function() {
-        const numbersText = inputField.value.trim();
-        if (!numbersText) {
-            alert("कृपया इनपुट भरें!");
-            return;
-        }
-        // Prepare data for request
-        const payload = { numbers: numbersText };
-        // Send AJAX request to backend
-        fetch('/predict', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => { throw new Error(err.error || 'Server Error'); });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Display prediction result
-            const predNum = data.predicted_number;
-            const category = data.prediction_category;
-            resultDiv.innerHTML = `<p>अनुमानित अगला नंबर: <strong>${predNum}</strong> (${category})</p>`;
-            // Data for frequency chart
-            const labels = data.frequency_labels;
-            const values = data.frequency_values;
-            // Data for Big/Small probability chart
-            const bigProbPercent = Math.round(data.big_probability * 100);
-            const smallProbPercent = Math.round(data.small_probability * 100);
-            const bsLabels = ['Big', 'Small'];
-            const bsValues = [bigProbPercent, smallProbPercent];
-            // Create or update frequency chart
-            const freqCtx = document.getElementById('freqChart').getContext('2d');
-            if (!freqChartInstance) {
-                // initialize new Chart
-                freqChartInstance = new Chart(freqCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Frequency',
-                            data: values,
-                            backgroundColor: 'rgba(54, 162, 235, 0.6)'
-                        }]
-                    },
-                    options: {
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'संख्या आवृत्ति वितरण (Frequency of Numbers)'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'मात्रा (Count)'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'संख्या (Number)'
-                                }
-                            }
-                        }
-                    }
-                });
-            } else {
-                // update existing chart data
-                freqChartInstance.data.labels = labels;
-                freqChartInstance.data.datasets[0].data = values;
-                freqChartInstance.update();
-            }
-            // Create or update Big/Small probability chart
-            const bsCtx = document.getElementById('bigSmallChart').getContext('2d');
-            if (!bigSmallChartInstance) {
-                bigSmallChartInstance = new Chart(bsCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: bsLabels,
-                        datasets: [{
-                            label: 'Big vs Small Probability (%)',
-                            data: bsValues,
-                            backgroundColor: ['rgba(54, 162, 235, 0.6)', 'rgba(255, 159, 64, 0.6)']
-                        }]
-                    },
-                    options: {
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Big/Small पूर्वानुमान संभावना (%)'
-                            }
-                        }
-                    }
-                });
-            } else {
-                bigSmallChartInstance.data.datasets[0].data = bsValues;
-                bigSmallChartInstance.update();
-            }
-        })
-        .catch(error => {
-            console.error("Prediction error:", error);
-            resultDiv.innerHTML = `<p style="color:red;">त्रुटि: ${error.message}</p>`;
-        });
-    });
-});
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinGo Predictor Pro</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Link to custom CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>WinGo Predictor Pro</h1>
+        <p>इतिहासात्मक WinGo नंबर डालें और अगला नंबर भविष्यवाणी करें।</p>
+        <!-- Input form -->
+        <div class="input-section">
+            <label for="numbers">पिछले WinGo नंबर (comma या space से अलग करें):</label><br>
+            <input type="text" id="numbers" name="numbers" placeholder="जैसे: 5, 7, 3, 8, 4" size="50">
+            <button id="predictBtn">भविष्यवाणी करें</button>
+        </div>
+        <!-- Result display -->
+        <div class="result-section">
+            <h3>परिणाम:</h3>
+            <div id="result"></div>
+        </div>
+        <!-- Chart sections -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <canvas id="freqChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="bigSmallChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <!-- Custom script -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
