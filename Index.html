@@ -1,157 +1,141 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🎯 WinGo Predictor Pro</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #0f0f0f, #000000);
-      color: #fff;
-      text-align: center;
+from flask import Flask, render_template, request, jsonify
+import numpy as np
+import pickle
+import os
+
+app = Flask(__name__)
+
+# Load pre-trained model if available
+model = None
+model_path = os.path.join(os.path.dirname(__file__), "models", "wingo_model.pkl")
+if os.path.exists(model_path):
+    try:
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        model = None
+
+def predict_next_number(sequence):
+    """
+    Predict the next number based on the sequence of historical numbers.
+    Uses a pre-trained model if available; otherwise uses frequency-based logic.
+    """
+    global model
+    # If a model is loaded, use it for prediction
+    if model:
+        try:
+            # Example: if model expects a feature vector derived from sequence
+            # Here we'll use the last 5 numbers as features if possible
+            seq = sequence[-5:] if len(sequence) >= 5 else sequence
+            # Pad sequence to length 5 if shorter
+            if len(seq) < 5:
+                seq = [seq[0]] * (5 - len(seq)) + seq
+            X = np.array(seq).reshape(1, -1)
+            # If model is classifier with predict_proba (e.g. RandomForestClassifier)
+            if hasattr(model, "predict_proba"):
+                proba = model.predict_proba(X)[0]
+                # pick class with highest probability
+                pred_number = int(model.classes_[np.argmax(proba)])
+            else:
+                # If model is regression or Keras model returning a number directly
+                pred_number = int(round(model.predict(X)[0]))
+        except Exception as e:
+            print(f"Model prediction error, using fallback. Error: {e}")
+            model = None  # fall back to freq logic
+            pred_number = predict_next_number(sequence)  # recursive call without model
+        return pred_number
+    else:
+        # Fallback: frequency-based prediction (mode of sequence)
+        if not sequence:
+            return None
+        freq = {}
+        for num in sequence:
+            freq[num] = freq.get(num, 0) + 1
+        max_freq = max(freq.values())
+        # candidates with max frequency
+        candidates = [num for num, count in freq.items() if count == max_freq]
+        # choose the one which appeared last in the sequence
+        pred_number = candidates[-1]
+        return pred_number
+
+def classify_big_small(number, min_val=None, max_val=None):
+    """
+    Classify a number as 'Big' or 'Small' based on a threshold.
+    Threshold default is mid of range (min_val, max_val) if provided, else 5.
+    """
+    if number is None:
+        return None
+    # Determine threshold
+    if min_val is not None and max_val is not None:
+        threshold = (min_val + max_val) / 2
+    else:
+        threshold = 5  # default threshold for unknown range
+    return "Big" if number >= threshold else "Small"
+
+def compute_frequency(sequence):
+    """
+    Compute frequency of each unique number in the sequence.
+    Returns a list of (number, count) sorted by number.
+    """
+    freq = {}
+    for num in sequence:
+        freq[num] = freq.get(num, 0) + 1
+    freq_sorted = sorted(freq.items(), key=lambda x: x[0])
+    return freq_sorted
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.get_json()
+    if not data or 'numbers' not in data:
+        return jsonify({"error": "No input numbers provided."}), 400
+    # Parse input numbers from string or list
+    numbers = data['numbers']
+    if isinstance(numbers, str):
+        parts = [p.strip() for p in numbers.replace(',', ' ').split()]
+        try:
+            numbers_seq = [int(x) for x in parts]
+        except:
+            return jsonify({"error": "Invalid input format. Provide numbers separated by commas or spaces."}), 400
+    elif isinstance(numbers, list):
+        try:
+            numbers_seq = [int(x) for x in numbers]
+        except:
+            return jsonify({"error": "Invalid number in input list."}), 400
+    else:
+        return jsonify({"error": "Unsupported input format."}), 400
+    if not numbers_seq:
+        return jsonify({"error": "Empty sequence provided."}), 400
+
+    # Compute prediction
+    pred_num = predict_next_number(numbers_seq)
+    # Determine classification of predicted number
+    min_val = min(numbers_seq) if numbers_seq else None
+    max_val = max(numbers_seq) if numbers_seq else None
+    pred_class = classify_big_small(pred_num, min_val, max_val)
+    # Calculate Big/Small frequency in history
+    big_count = sum(1 for n in numbers_seq if classify_big_small(n, min_val, max_val) == "Big")
+    small_count = len(numbers_seq) - big_count
+    big_prob = big_count / len(numbers_seq)
+    small_prob = small_count / len(numbers_seq)
+    # Frequency distribution of past numbers
+    freq_list = compute_frequency(numbers_seq)
+    labels = [str(num) for num, count in freq_list]
+    counts = [count for num, count in freq_list]
+    # Prepare JSON response
+    result = {
+        "predicted_number": int(pred_num) if pred_num is not None else None,
+        "prediction_category": pred_class,
+        "big_probability": round(big_prob, 2),
+        "small_probability": round(small_prob, 2),
+        "frequency_labels": labels,
+        "frequency_values": counts
     }
+    return jsonify(result)
 
-    header {
-      background: #000;
-      padding: 16px 0;
-      box-shadow: 0 2px 8px #FFD700;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 28px;
-      color: #FFD700;
-    }
-
-    .container {
-      padding: 30px 20px;
-    }
-
-    .input-section input {
-      padding: 10px;
-      border: 2px solid gold;
-      border-radius: 10px;
-      width: 80%;
-      font-size: 18px;
-      margin-top: 10px;
-      background-color: #000;
-      color: #fff;
-      text-align: center;
-    }
-
-    .input-section button {
-      margin-top: 15px;
-      background-color: gold;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 16px;
-      cursor: pointer;
-      color: black;
-      box-shadow: 0 0 10px gold;
-    }
-
-    .result-box {
-      background-color: #111;
-      color: #FFD700;
-      padding: 28px;
-      border-radius: 20px;
-      width: 85%;
-      max-width: 400px;
-      margin: 30px auto;
-      font-size: 20px;
-      box-shadow: 0 0 15px #ffc107;
-      text-align: left;
-      display: none;
-      transition: all 0.3s ease-in-out;
-    }
-
-    .result-box p {
-      margin: 12px 0;
-      font-weight: 600;
-    }
-
-    .thinking {
-      font-size: 18px;
-      color: #FFEB3B;
-      margin-top: 20px;
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-      0% { opacity: 0.2; }
-      50% { opacity: 1; }
-      100% { opacity: 0.2; }
-    }
-
-    .label {
-      font-weight: bold;
-      margin-right: 6px;
-      color: #fff;
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <h1>🎯 WinGo Predictor Pro</h1>
-  </header>
-
-  <div class="container">
-    <div class="input-section">
-      <label for="inputNumbers">🔢 <b>Enter Previous Numbers:</b></label><br/>
-      <input type="text" id="inputNumbers" placeholder="e.g., 274"/><br/>
-      <button onclick="predictResult()">🔮 Predict Result</button>
-    </div>
-
-    <div id="thinking" class="thinking" style="display: none;">🤖 AI Thinking...</div>
-    <div class="result-box" id="resultBox"></div>
-  </div>
-
-  <script>
-    let lastInput = "";
-
-    function predictResult() {
-      const input = document.getElementById("inputNumbers").value.trim();
-      const resultBox = document.getElementById("resultBox");
-      const thinking = document.getElementById("thinking");
-
-      if (!input) {
-        alert("Please enter a number.");
-        return;
-      }
-
-      if (input === lastInput) {
-        alert("⚠️ Please enter a new number!");
-        return;
-      }
-
-      lastInput = input;
-      resultBox.style.display = "none";
-      thinking.style.display = "block";
-
-      // 3 seconds delay to simulate AI thinking
-      setTimeout(() => {
-        const number = Math.floor(Math.random() * 10);
-        const color = (number % 2 === 0) ? "🟥 Red" : "🟩 Green";
-        const size = (number >= 5) ? "🔴 Big" : "🟢 Small";
-        const confidence = Math.floor(Math.random() * 16) + 85;
-
-        const resultHTML = `
-          <p><span class="label">📏 Size:</span> ${size}</p>
-          <p><span class="label">🎨 Colour:</span> ${color}</p>
-          <p><span class="label">🔢 Number:</span> ${number}</p>
-          <p><span class="label">🧠 Confidence:</span> ${confidence}%</p>
-        `;
-
-        thinking.style.display = "none";
-        resultBox.innerHTML = resultHTML;
-        resultBox.style.display = "block";
-      }, 3000);
-    }
-  </script>
-
-</body>
-</html>
+if __name__ == '__main__':
+    app.run(debug=True)
