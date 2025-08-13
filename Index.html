@@ -1,39 +1,157 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>🎯 WinGo Predictor Pro</title>
-  <link rel="stylesheet" href="/static/css/styles.css" />
-  <!-- Chart.js for graphs -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom right, #0f0f0f, #000000);
+      color: #fff;
+      text-align: center;
+    }
+
+    header {
+      background: #000;
+      padding: 16px 0;
+      box-shadow: 0 2px 8px #FFD700;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+      color: #FFD700;
+    }
+
+    .container {
+      padding: 30px 20px;
+    }
+
+    .input-section input {
+      padding: 10px;
+      border: 2px solid gold;
+      border-radius: 10px;
+      width: 80%;
+      font-size: 18px;
+      margin-top: 10px;
+      background-color: #000;
+      color: #fff;
+      text-align: center;
+    }
+
+    .input-section button {
+      margin-top: 15px;
+      background-color: gold;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      color: black;
+      box-shadow: 0 0 10px gold;
+    }
+
+    .result-box {
+      background-color: #111;
+      color: #FFD700;
+      padding: 28px;
+      border-radius: 20px;
+      width: 85%;
+      max-width: 400px;
+      margin: 30px auto;
+      font-size: 20px;
+      box-shadow: 0 0 15px #ffc107;
+      text-align: left;
+      display: none;
+      transition: all 0.3s ease-in-out;
+    }
+
+    .result-box p {
+      margin: 12px 0;
+      font-weight: 600;
+    }
+
+    .thinking {
+      font-size: 18px;
+      color: #FFEB3B;
+      margin-top: 20px;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { opacity: 0.2; }
+    }
+
+    .label {
+      font-weight: bold;
+      margin-right: 6px;
+      color: #fff;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
+
+  <header>
     <h1>🎯 WinGo Predictor Pro</h1>
+  </header>
 
-    <div class="card">
-      <label for="history">🔢 पिछले नंबर दर्ज करें (comma-separated):</label>
-      <input id="history" type="text" placeholder="उदा: 3,7,1,9,4,0,2,8,6,5" />
-      <button id="predictBtn">🔮 Predict Result</button>
-
-      <div id="thinking" class="thinking" style="display:none;">🤖 AI Thinking...</div>
-      <div class="result-box" id="resultBox"></div>
+  <div class="container">
+    <div class="input-section">
+      <label for="inputNumbers">🔢 <b>Enter Previous Numbers:</b></label><br/>
+      <input type="text" id="inputNumbers" placeholder="e.g., 274"/><br/>
+      <button onclick="predictResult()">🔮 Predict Result</button>
     </div>
 
-    <div class="grid">
-      <div class="card">
-        <h3>Probability Distribution (0–9)</h3>
-        <canvas id="probChart"></canvas>
-      </div>
-      <div class="card">
-        <h3>Big vs Small</h3>
-        <div id="bigSmall"></div>
-      </div>
-    </div>
+    <div id="thinking" class="thinking" style="display: none;">🤖 AI Thinking...</div>
+    <div class="result-box" id="resultBox"></div>
   </div>
 
-  <!-- App logic -->
-  <script src="/static/js/app.js"></script>
+  <script>
+    let lastInput = "";
+
+    function predictResult() {
+      const input = document.getElementById("inputNumbers").value.trim();
+      const resultBox = document.getElementById("resultBox");
+      const thinking = document.getElementById("thinking");
+
+      if (!input) {
+        alert("Please enter a number.");
+        return;
+      }
+
+      if (input === lastInput) {
+        alert("⚠️ Please enter a new number!");
+        return;
+      }
+
+      lastInput = input;
+      resultBox.style.display = "none";
+      thinking.style.display = "block";
+
+      // 3 seconds delay to simulate AI thinking
+      setTimeout(() => {
+        const number = Math.floor(Math.random() * 10);
+        const color = (number % 2 === 0) ? "🟥 Red" : "🟩 Green";
+        const size = (number >= 5) ? "Big" : "Small";  // Removed color icon
+        const confidence = Math.floor(Math.random() * 16) + 85;
+
+        const resultHTML = 
+          <p><span class="label">📏 Size :</span> ${size}</p>
+          <p><span class="label">🎨 Colour :</span> ${color}</p>
+          <p><span class="label">🔢 Number :</span> ${number}</p>
+          <p><span class="label">🧠 Confidence :</span> ${confidence}%</p>
+        ;
+
+        thinking.style.display = "none";
+        resultBox.innerHTML = resultHTML;
+        resultBox.style.display = "block";
+      }, 3000);
+    }
+  </script>
+
 </body>
 </html>
