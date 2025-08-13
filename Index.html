@@ -1,40 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WinGo Predictor Pro</title>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Link to custom CSS -->
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎯 WinGo Predictor Pro</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>WinGo Predictor Pro</h1>
-        <p>इतिहासात्मक WinGo नंबर डालें और अगला नंबर भविष्यवाणी करें।</p>
-        <!-- Input form -->
-        <div class="input-section">
-            <label for="numbers">पिछले WinGo नंबर (comma या space से अलग करें):</label><br>
-            <input type="text" id="numbers" name="numbers" placeholder="जैसे: 5, 7, 3, 8, 4" size="50">
-            <button id="predictBtn">भविष्यवाणी करें</button>
-        </div>
-        <!-- Result display -->
-        <div class="result-section">
-            <h3>परिणाम:</h3>
-            <div id="result"></div>
-        </div>
-        <!-- Chart sections -->
-        <div class="charts-section">
-            <div class="chart-container">
-                <canvas id="freqChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="bigSmallChart"></canvas>
-            </div>
-        </div>
+  <div class="container">
+    <h1>🎯 WinGo Predictor Pro</h1>
+
+    <div class="card">
+      <label for="history">🔢 पिछले नंबर दर्ज करें (comma-separated):</label>
+      <input id="history" type="text" placeholder="उदा: 3,7,1,9,4,0,2,8,6,5" />
+      <button id="predictBtn">🔮 Predict Result</button>
+
+      <div id="thinking" class="thinking" style="display:none;">🤖 AI Thinking...</div>
+      <div class="result-box" id="resultBox"></div>
     </div>
-    <!-- Custom script -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Probability Distribution (0–9)</h3>
+        <canvas id="probChart"></canvas>
+      </div>
+      <div class="card">
+        <h3>Big vs Small</h3>
+        <div id="bigSmall"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App logic -->
+  <script src="/static/js/app.js"></script>
 </body>
 </html>
